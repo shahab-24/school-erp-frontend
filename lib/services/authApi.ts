@@ -1,18 +1,21 @@
+import { AuthResponse, LoginPayload } from "@/types/auth.types";
 import { apiSlice } from "./apiSlice";
+
 
 export const authApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    login: builder.mutation<
-      { token: string; role: string },
-      { email: string; password: string }
-    >({
-      query: (credentials) => ({
+    login: builder.mutation<AuthResponse, LoginPayload>({
+      query: (data) => ({
         url: "/auth/login",
         method: "POST",
-        body: credentials,
+        body: data,
       }),
+    }),
+
+    getMe: builder.query<AuthResponse["user"], void>({
+      query: () => "/auth/me",
     }),
   }),
 });
 
-export const { useLoginMutation } = authApi;
+export const { useLoginMutation, useGetMeQuery } = authApi;

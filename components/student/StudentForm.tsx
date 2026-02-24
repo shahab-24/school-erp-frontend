@@ -1,68 +1,91 @@
-"use client";
+"use client"
 
-import { Student } from "@/types/student.types";
+import { useForm, useFieldArray } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 
+import { toast } from "@/components/ui/use-toast"
+import { StudentFormData, studentSchema } from "@/schemas/student.schema"
+import { useCreateStudentMutation } from "@/lib/services/studentApi"
 
+export default function StudentForm() {
+  const [createStudent, { isLoading }] = useCreateStudentMutation()
 
-interface Props {
-  onSubmit: (data: Student) => void;
-  loading: boolean;
-}
-
-export default function StudentForm({ onSubmit, loading }: Props) {
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const form = new FormData(e.currentTarget);
-
-    const payload: Student = {
-      studentUid: form.get("studentUid") as string,
-      name: {
-        en: form.get("name_en") as string,
-        bn: form.get("name_bn") as string,
-      },
-      gender: form.get("gender") as Student["gender"],
-      religion: form.get("religion") as string,
-      birthDate: form.get("birthDate") as string,
-      birthRegistration: form.get("birthRegistration") as string,
-      languagePreference: "bn",
-      father: {
-        name: {
-          en: form.get("father_en") as string,
-          bn: form.get("father_bn") as string,
-        },
-        mobile: form.get("father_mobile") as string,
-        nid: form.get("father_nid") as string,
-        birthRegistration: form.get("father_br") as string,
-      },
-      mother: {
-        name: {
-          en: form.get("mother_en") as string,
-          bn: form.get("mother_bn") as string,
-        },
-        mobile: form.get("mother_mobile") as string,
-        nid: form.get("mother_nid") as string,
-        birthRegistration: form.get("mother_br") as string,
-      },
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<StudentFormData>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: {
       guardians: [],
-      current: {
-        session: form.get("session") as string,
-        class: Number(form.get("class")),
-        roll: Number(form.get("roll")),
-      },
-    };
+    },
+  })
 
-    onSubmit(payload);
-  };
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "guardians",
+  })
+
+  const onSubmit = async (data: StudentFormData) => {
+    try {
+      await createStudent(data).unwrap()
+      toast({ title: "Student Created Successfully" })
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.data?.message || "Failed",
+        variant: "destructive",
+      })
+    }
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
-      <input name="studentUid" placeholder="Student UID" required />
-      <input name="name_en" placeholder="Name EN" required />
-      <input name="name_bn" placeholder="Name BN" required />
-      <button disabled={loading}>
-        {loading ? "Saving..." : "Save Student"}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+      <input {...register("studentUid")} placeholder="Student UID" />
+      {errors.studentUid && <p>{errors.studentUid.message}</p>}
+
+      <input {...register("name.en")} placeholder="Name EN" />
+      <input {...register("name.bn")} placeholder="Name BN" />
+
+      {/* Father */}
+      <h2>Father</h2>
+      <input {...register("father.name.en")} placeholder="Father EN" />
+      <input {...register("father.mobile")} placeholder="Father Mobile" />
+
+      {/* Guardians */}
+      <h2>Guardians</h2>
+      {fields.map((field, index) => (
+        <div key={field.id} className="border p-4 rounded">
+          <input {...register(`guardians.${index}.name.en`)} placeholder="Guardian EN" />
+          <select {...register(`guardians.${index}.walletProvider`)}>
+            <option value="bKash">bKash</option>
+            <option value="Nagad">Nagad</option>
+            <option value="Rocket">Rocket</option>
+            <option value="Other">Other</option>
+          </select>
+          <button type="button" onClick={() => remove(index)}>Remove</button>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() =>
+          append({
+            relation: "guardian",
+            name: { en: "", bn: "" },
+            mobile: "",
+            walletProvider: "bKash",
+          })
+        }
+      >
+        Add Guardian
+      </button>
+
+      <button disabled={isLoading}>
+        {isLoading ? "Saving..." : "Create Student"}
       </button>
     </form>
-  );
+  )
 }

@@ -2,6 +2,7 @@
 
 import { Provider } from "react-redux";
 import { store } from "@/lib/store";
+import { ThemeProvider } from "@/context/ThemeProvider";
 
 export default function RootLayout({
   children,
@@ -9,9 +10,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html>
       <body>
-        <Provider store={store}>{children}</Provider>
+        <ThemeProvider>
+          <Provider store={store}>{children}</Provider>
+        </ThemeProvider>
       </body>
     </html>
   );
