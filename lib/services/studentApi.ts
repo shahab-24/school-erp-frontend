@@ -80,6 +80,11 @@ export const studentApi = apiSlice.injectEndpoints({
       ],
     }),
 
+    getStudentByUid: builder.query<Student, string>({
+      query: (uid) => `/students/${uid}`,
+      providesTags: (result, error, uid) => [{ type: "Student", id: uid }],
+    }),
+
     // ===============================
     // UPDATE STIPEND
     // ===============================
@@ -107,4 +112,5 @@ export const {
   usePromoteStudentMutation,
   useGetStipendQuery,
   useUpdateStipendMutation,
+  useGetStudentByUidQuery
 } = studentApi;

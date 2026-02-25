@@ -1,8 +1,13 @@
-"use client";
+// src/app/layout.tsx  ← ROOT layout (server component)
+import type { Metadata } from "next";
+import { appConfig } from "@/lib/config/appConfig";
+import ClientLayout from "./ClientLayout";
+import "./globals.css";
 
-import { Provider } from "react-redux";
-import { store } from "@/lib/store";
-import { ThemeProvider } from "@/context/ThemeProvider";
+export const metadata: Metadata = {
+  title: `${appConfig.schoolNameEn} — ERP`,
+  description: `School management system for ${appConfig.schoolNameEn}`,
+};
 
 export default function RootLayout({
   children,
@@ -10,11 +15,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
+    // suppressHydrationWarning is REQUIRED:
+    // ThemeProvider sets data-theme on <html> client-side (useEffect).
+    // Server renders <html> without it → React sees mismatch → warning.
+    // This prop silences only that one attribute mismatch — nothing else.
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider>
-          <Provider store={store}>{children}</Provider>
-        </ThemeProvider>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

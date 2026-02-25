@@ -30,10 +30,13 @@ export const studentSchema = z.object({
   father: parentSchema,
   mother: parentSchema,
   guardians: z.array(guardianSchema).optional(),
+
   current: z.object({
     session: z.string(),
-    class: z.number(),
-    roll: z.number(),
+
+    class: z.preprocess((val) => Number(val), z.number().int().positive()),
+
+    roll: z.preprocess((val) => Number(val), z.number().int().positive()),
   }),
 });
 

@@ -1,28 +1,40 @@
+// src/components/layout/Sidebar.tsx
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
-import { RootState } from "@/lib/store";
+import type { RootState } from "@/lib/store";
 import { appConfig } from "@/lib/config/appConfig";
-
 
 interface SidebarProps {
   onClose?: () => void;
 }
+interface NavLink {
+  href: string;
+  label: string;
+  exact?: boolean;
+  icon: React.ReactNode;
+}
+interface NavSection {
+  title: string;
+  roles?: string[];
+  links: NavLink[];
+}
 
-const navItems = [
+const NAV: NavSection[] = [
   {
-    section: "Core",
+    title: "Core",
     links: [
       {
-        href: "/dashboard",
+        href: "/",
         label: "Overview",
         exact: true,
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -38,12 +50,12 @@ const navItems = [
         ),
       },
       {
-        href: "/dashboard/students",
+        href: "/students",
         label: "Students",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -57,12 +69,12 @@ const navItems = [
         ),
       },
       {
-        href: "/dashboard/attendance",
+        href: "/attendance",
         label: "Attendance",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -76,12 +88,12 @@ const navItems = [
         ),
       },
       {
-        href: "/dashboard/classes",
+        href: "/classes",
         label: "Classes",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -96,16 +108,16 @@ const navItems = [
     ],
   },
   {
-    section: "Management",
+    title: "Management",
     roles: ["SCHOOL_ADMIN"],
     links: [
       {
-        href: "/dashboard/teachers",
+        href: "/teachers",
         label: "Teachers",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -119,12 +131,12 @@ const navItems = [
         ),
       },
       {
-        href: "/dashboard/results",
+        href: "/results",
         label: "Results",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -137,12 +149,12 @@ const navItems = [
         ),
       },
       {
-        href: "/dashboard/fees",
+        href: "/fees",
         label: "Fee Management",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -152,17 +164,16 @@ const navItems = [
           >
             <rect width="20" height="14" x="2" y="5" rx="2" />
             <path d="M2 10h20" />
-            <circle cx="12" cy="14" r="1" />
           </svg>
         ),
       },
       {
-        href: "/dashboard/reports",
+        href: "/reports",
         label: "Reports",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -178,12 +189,12 @@ const navItems = [
         ),
       },
       {
-        href: "/dashboard/settings",
+        href: "/settings",
         label: "Settings",
         icon: (
           <svg
-            width="17"
-            height="17"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -201,81 +212,88 @@ const navItems = [
 ];
 
 export default function Sidebar({ onClose }: SidebarProps) {
-  const role = useSelector((state: RootState) => state.auth.role);
-  const user = useSelector((state: RootState) => state.auth.user);
   const pathname = usePathname();
+  const user = useSelector((s: RootState) => s.auth.user);
+  const role = useSelector((s: RootState) => s.auth.role);
+  const initials = (user?.name ?? user?.email ?? "U").charAt(0).toUpperCase();
 
   const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+    exact
+      ? pathname === href
+      : pathname === href || pathname.startsWith(href + "/");
 
   return (
     <>
       <style>{`
-        .sidebar { width:260px; height:100dvh; background:var(--bg-sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
-        .sidebar-header { padding:18px 18px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-        .sidebar-brand  { display:flex; align-items:center; gap:10px; text-decoration:none; }
-        .sidebar-logo-wrap { width:36px; height:36px; border-radius:9px; overflow:hidden; background:var(--accent-soft); border:1.5px solid rgba(245,158,11,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--accent); }
-        .sidebar-logo-wrap img { width:100%; height:100%; object-fit:contain; padding:5px; }
-        .sidebar-brand-text { display:flex; flex-direction:column; min-width:0; }
-        .sidebar-brand-name { font-size:13px; font-weight:700; color:var(--text-primary); letter-spacing:-0.3px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
-        .sidebar-brand-bn   { font-size:11px; color:var(--text-muted); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
-        .sidebar-brand-tag  { font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--text-muted); letter-spacing:0.4px; }
-        .sidebar-close { display:none; background:none; border:none; cursor:pointer; color:var(--text-muted); padding:6px; border-radius:6px; transition:color var(--transition),background var(--transition); }
-        .sidebar-close:hover { color:var(--text-primary); background:var(--accent-soft); }
-        @media(max-width:1024px){ .sidebar-close{ display:flex; align-items:center; } }
-        .sidebar-nav { flex:1; overflow-y:auto; padding:14px 10px; display:flex; flex-direction:column; gap:18px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
-        .nav-section-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); padding:0 8px; margin-bottom:4px; }
-        .nav-links { display:flex; flex-direction:column; gap:1px; }
-        .nav-link { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:8px; text-decoration:none; color:var(--text-secondary); font-size:13.5px; font-weight:500; transition:color var(--transition),background var(--transition); position:relative; }
-        .nav-link:hover { color:var(--text-primary); background:var(--accent-soft); }
-        .nav-link.active { color:var(--accent); background:var(--accent-soft); font-weight:600; }
-        .nav-link.active::before { content:''; position:absolute; left:0; top:20%; bottom:20%; width:3px; background:var(--accent); border-radius:0 3px 3px 0; }
-        .nav-link-icon { flex-shrink:0; display:flex; opacity:0.7; transition:opacity var(--transition); }
-        .nav-link:hover .nav-link-icon, .nav-link.active .nav-link-icon { opacity:1; }
-        .sidebar-footer { padding:12px 10px; border-top:1px solid var(--border); flex-shrink:0; }
-        .sidebar-school-info { padding:10px 10px 12px; border-bottom:1px solid var(--border); margin-bottom:10px; }
-        .sidebar-school-info-name { font-size:11px; font-weight:600; color:var(--text-secondary); line-height:1.4; }
-        .sidebar-school-info-addr { font-size:10px; color:var(--text-muted); margin-top:2px; line-height:1.4; }
-        .user-card { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--border); }
-        .user-avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--accent) 0%,#EA580C 100%); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#0B0F1A; flex-shrink:0; }
-        .user-info { flex:1; min-width:0; }
-        .user-name { font-size:12.5px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .user-role { font-size:10.5px; color:var(--accent); font-weight:500; text-transform:uppercase; letter-spacing:0.3px; }
-        .user-status { width:7px; height:7px; border-radius:50%; background:#34D399; flex-shrink:0; animation:statusPulse 2s ease infinite; }
-        @keyframes statusPulse { 0%,100%{box-shadow:0 0 0 2px rgba(52,211,153,0.2)} 50%{box-shadow:0 0 0 5px rgba(52,211,153,0.06)} }
+        /* All colors from globals.css — auto theme-aware */
+        .sidebar { display:flex; flex-direction:column; width:var(--sidebar-w); height:100%; background:var(--bg-sidebar); border-right:1px solid var(--border); overflow:hidden; }
+        .sb-header { display:flex; align-items:center; justify-content:space-between; padding:15px 14px 13px; border-bottom:1px solid var(--border); flex-shrink:0; }
+        .sb-brand { display:flex; align-items:center; gap:10px; text-decoration:none; min-width:0; }
+        .sb-logo { width:36px; height:36px; flex-shrink:0; border-radius:10px; overflow:hidden; background:var(--accent-soft); border:1.5px solid rgba(245,158,11,0.2); display:flex; align-items:center; justify-content:center; color:var(--accent); }
+        .sb-brand-en { font-size:12.5px; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; line-height:1.25; }
+        .sb-brand-bn { font-size:10.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; margin-top:1px; }
+        .sb-brand-tag { font-family:"JetBrains Mono",monospace; font-size:9.5px; color:var(--text-muted); letter-spacing:0.4px; margin-top:1px; }
+        .sb-close { display:none; background:none; border:none; cursor:pointer; color:var(--text-muted); padding:6px; border-radius:7px; transition:color var(--transition),background var(--transition); }
+        .sb-close:hover { color:var(--text-primary); background:var(--accent-soft); }
+        @media(max-width:1024px){ .sb-close{display:flex;align-items:center;} }
+        .sb-nav { flex:1; overflow-y:auto; padding:14px 10px; display:flex; flex-direction:column; gap:18px; }
+        .sb-section-label { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--text-muted); padding:0 8px; margin-bottom:3px; }
+        .sb-links { display:flex; flex-direction:column; gap:1px; }
+        .sb-link-icon { flex-shrink:0; opacity:0.65; transition:opacity var(--transition); display:flex; }
+        .nav-link:hover .sb-link-icon,.nav-link.active .sb-link-icon { opacity:1; }
+        .sb-footer { border-top:1px solid var(--border); padding:11px 10px; flex-shrink:0; }
+        .sb-info { padding:9px 11px; margin-bottom:8px; border-radius:var(--radius-sm); background:var(--bg-input); border:1px solid var(--border); }
+        .sb-info-text { font-size:10.5px; color:var(--text-muted); line-height:1.55; }
+        .sb-user { display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:var(--radius-sm); background:var(--accent-soft); border:1px solid rgba(245,158,11,0.12); }
+        .sb-avatar { width:32px; height:32px; border-radius:8px; flex-shrink:0; background:linear-gradient(135deg,var(--accent) 0%,#EA580C 100%); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#0B0F1A; }
+        .sb-user-name { font-size:12.5px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sb-user-role { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--accent); }
+        .sb-online { width:7px; height:7px; border-radius:50%; background:#34D399; flex-shrink:0; margin-left:auto; animation:statusPulse 2s ease-in-out infinite; }
       `}</style>
 
       <aside className="sidebar">
-        {/* ── HEADER — school name + logo from appConfig ── */}
-        <div className="sidebar-header">
-          <Link href="/dashboard" className="sidebar-brand">
-            <div className="sidebar-logo-wrap">
-              <img
+        {/* Header */}
+        <div className="sb-header">
+          <Link href="/" className="sb-brand">
+            <div className="sb-logo">
+              <Image
                 src={appConfig.logo}
                 alt={appConfig.schoolNameEn}
+                width={36}
+                height={36}
+                style={{ objectFit: "contain", padding: 5 }}
                 onError={(e) => {
-                  const parent = (e.target as HTMLImageElement).parentElement!;
-                  (e.target as HTMLImageElement).remove();
-                  parent.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>`;
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
                 }}
               />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </svg>
             </div>
-            <div className="sidebar-brand-text">
-              {/* Short form: first word of school name */}
-              <span className="sidebar-brand-name">
+            <div>
+              <div className="sb-brand-en">
                 {appConfig.schoolNameEn.split(" ").slice(0, 4).join(" ")}
-              </span>
+              </div>
               {appConfig.schoolNameBn && (
-                <span className="sidebar-brand-bn">
+                <div className="sb-brand-bn">
                   {appConfig.schoolNameBn.split(" ").slice(0, 3).join(" ")}
-                </span>
+                </div>
               )}
-              <span className="sidebar-brand-tag">School ERP</span>
+              <div className="sb-brand-tag">School ERP</div>
             </div>
           </Link>
-
           <button
-            className="sidebar-close"
+            className="sb-close"
             onClick={onClose}
             aria-label="Close sidebar"
           >
@@ -294,25 +312,25 @@ export default function Sidebar({ onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* ── NAVIGATION ── */}
-        <nav className="sidebar-nav">
-          {navItems.map((section) => {
+        {/* Navigation */}
+        <nav className="sb-nav" aria-label="Main navigation">
+          {NAV.map((section) => {
             if (section.roles && !section.roles.includes(role ?? ""))
               return null;
             return (
-              <div key={section.section}>
-                <div className="nav-section-label">{section.section}</div>
-                <div className="nav-links">
+              <div key={section.title}>
+                <p className="sb-section-label">{section.title}</p>
+                <div className="sb-links">
                   {section.links.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`nav-link ${
-                        isActive(link.href, (link as any).exact) ? "active" : ""
-                      }`}
                       onClick={onClose}
+                      className={`nav-link ${
+                        isActive(link.href, link.exact) ? "active" : ""
+                      }`}
                     >
-                      <span className="nav-link-icon">{link.icon}</span>
+                      <span className="sb-link-icon">{link.icon}</span>
                       {link.label}
                     </Link>
                   ))}
@@ -322,39 +340,29 @@ export default function Sidebar({ onClose }: SidebarProps) {
           })}
         </nav>
 
-        {/* ── FOOTER ── */}
-        <div className="sidebar-footer">
-          {/* School address — from appConfig */}
-          {appConfig.address && (
-            <div className="sidebar-school-info">
-              <div className="sidebar-school-info-name">
-                {appConfig.schoolNameEn}
-              </div>
-              <div className="sidebar-school-info-addr">
-                {appConfig.address}
-              </div>
+        {/* Footer */}
+        <div className="sb-footer">
+          {(appConfig.address || appConfig.phone) && (
+            <div className="sb-info">
+              {appConfig.address && (
+                <p className="sb-info-text">📍 {appConfig.address}</p>
+              )}
               {appConfig.phone && (
-                <div className="sidebar-school-info-addr">
-                  📞 {appConfig.phone}
-                </div>
+                <p className="sb-info-text">📞 {appConfig.phone}</p>
               )}
             </div>
           )}
-
-          {/* Logged-in user */}
-          <div className="user-card">
-            <div className="user-avatar">
-              {(user?.name ?? user?.email ?? "U").charAt(0).toUpperCase()}
-            </div>
-            <div className="user-info">
-              <div className="user-name">
+          <div className="sb-user">
+            <div className="sb-avatar">{initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p className="sb-user-name">
                 {user?.name ?? user?.email ?? "User"}
-              </div>
-              <div className="user-role">
+              </p>
+              <p className="sb-user-role">
                 {role?.replace("_", " ") ?? "User"}
-              </div>
+              </p>
             </div>
-            <div className="user-status" title="Online" />
+            <div className="sb-online" title="Online" />
           </div>
         </div>
       </aside>

@@ -1,284 +1,294 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { usePromoteStudentMutation } from "@/lib/services/studentApi";
-import { useToast } from "@/components/ui/use-toast";
+import {
+  useGetStudentByUidQuery,
+  usePromoteStudentMutation,
+} from "@/lib/services/studentApi";
+import type { PromotePayload } from "@/types/student.types";
 
-import Link from "next/link";
-import { appConfig } from "@/lib/config/appConfig";
+const CLASSES = Array.from({ length: 10 }, (_, i) => i + 1);
+const SESSIONS = ["2024", "2025", "2026"];
 
-const CURRENT_YEAR = new Date().getFullYear();
-
-export default function PromotePage() {
+export default function StudentPromotePage() {
   const { studentUid } = useParams<{ studentUid: string }>();
-  const [promote, { isLoading }] = usePromoteStudentMutation();
-const { toast } = useToast();
+  const router = useRouter();
 
-  const [fromClass, setFromClass] = useState(5);
-  const [toClass, setToClass] = useState(6);
-  const [session, setSession] = useState(String(CURRENT_YEAR + 1));
-  const [result, setResult] = useState<"promoted" | "held_back">("promoted");
+  // useGetStudentByUidQuery returns Student directly
+  const { data: student } = useGetStudentByUidQuery(studentUid);
 
-  const handlePromote = async () => {
-    if (result === "promoted" && toClass <= fromClass) {
-      toast({
-        title: "Invalid class selection",
-        description: "Promotion class must be higher.",
-        variant: "destructive",
-      });
-      return;
-    }
+  // promoteStudent({ studentUid, payload: PromotePayload })
+  const [promoteStudent, { isLoading }] = usePromoteStudentMutation();
+
+  const fromClass = student?.current?.class ?? 1;
+  const fromRoll = student?.current?.roll ?? 1;
+
+  const [form, setForm] = useState<{
+    session: string;
+    toClass: number;
+    result: "promoted" | "repeat";
+    newRoll: number;
+  }>({
+    session: SESSIONS[1],
+    toClass: fromClass + 1 > 10 ? 10 : fromClass + 1,
+    result: "promoted",
+    newRoll: 1,
+  });
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+    setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSubmit = async () => {
+    setError("");
+    const payload: PromotePayload = {
+      session: form.session,
+      fromClass,
+      toClass: form.result === "repeat" ? fromClass : Number(form.toClass),
+      result: form.result,
+      previousRoll: fromRoll,
+      newRoll: Number(form.newRoll),
+    };
     try {
-      await promote({
-        studentUid,
-        session,
-        fromClass,
-        toClass,
-        result,
-      }).unwrap();
-      toast({
-        title: "✓ Student Promoted",
-        description: `Moved to Class ${toClass} for session ${session}`,
-      });
-    } catch (err: any) {
-      toast({
-        title: "Promotion failed",
-        description: err?.data?.message ?? "Please try again.",
-        variant: "destructive",
-      });
+      await promoteStudent({ studentUid, payload }).unwrap();
+      setSuccess(true);
+      setTimeout(
+        () => router.push(`/dashboard/students/${studentUid}/results`),
+        1400
+      );
+    } catch (e: any) {
+      setError(e?.data?.message ?? "Promotion failed. Please try again.");
     }
   };
+
+  const isRepeat = form.result === "repeat";
 
   return (
     <>
       <style>{`
-        .promo-page { max-width:520px; margin:0 auto; animation:pageEnter 0.3s ease both; }
-        .promo-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-card); overflow:hidden; }
-        .promo-header { background:var(--accent-soft); border-bottom:1px solid var(--border); padding:18px 22px; display:flex; align-items:center; gap:14px; }
-        .promo-icon { width:42px; height:42px; border-radius:11px; background:var(--accent); color:#0B0F1A; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .promo-header-title { font-size:15px; font-weight:700; color:var(--text-primary); }
-        .promo-header-sub   { font-size:12px; color:var(--text-muted); margin-top:2px; }
-        .promo-body  { padding:22px; display:flex; flex-direction:column; gap:16px; }
-        .promo-field { display:flex; flex-direction:column; gap:5px; }
-        .promo-label { font-size:11.5px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; }
-        .promo-classes { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:end; }
-        .promo-arrow { display:flex; align-items:center; justify-content:center; padding-bottom:9px; color:var(--accent); }
-        .promo-result-group { display:flex; gap:8px; }
-        .promo-result-opt { flex:1; padding:9px 13px; border:1.5px solid var(--border); border-radius:var(--radius-sm); display:flex; align-items:center; gap:8px; cursor:pointer; transition:all var(--transition); background:var(--bg-input); }
-        .promo-result-opt.sel-promo { border-color:var(--success); background:var(--success-bg); }
-        .promo-result-opt.sel-held  { border-color:var(--error);   background:var(--error-bg);   }
-        .promo-dot   { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-        .promo-opt-label { font-size:13px; font-weight:600; color:var(--text-primary); }
-        .promo-warning { background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2); border-radius:var(--radius-sm); padding:11px 13px; display:flex; gap:9px; align-items:flex-start; }
-        .promo-warning-text { font-size:12.5px; color:var(--text-secondary); line-height:1.5; }
-        .promo-school { font-size:11px; color:var(--text-muted); margin-top:2px; }
-        .promo-footer { padding:14px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; }
+        .pr-wrap { animation:pageEnter .3s ease both; }
+        .pr-header { margin-bottom:22px; }
+        .pr-title { font-size:16px; font-weight:700; color:var(--text-primary); }
+        .pr-desc  { font-size:12.5px; color:var(--text-muted); margin-top:3px; }
+
+        /* Current strip */
+        .pr-strip { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px 20px; margin-bottom:20px; display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+        .pr-strip-item {}
+        .pr-strip-label { font-size:10.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+        .pr-strip-val { font-size:22px; font-weight:800; color:var(--text-primary); font-family:'JetBrains Mono',monospace; margin-top:2px; }
+        .pr-strip-arrow { color:var(--text-muted); }
+
+        /* Form card */
+        .pr-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:20px; }
+        .pr-card-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:18px; }
+
+        /* Result toggle */
+        .pr-result-group { display:flex; gap:10px; margin-bottom:18px; }
+        .pr-result-btn { flex:1; padding:14px 10px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg-input); cursor:pointer; transition:all var(--transition); text-align:center; }
+        .pr-result-btn.promoted { border-color:#22C55E; background:rgba(34,197,94,.07); }
+        .pr-result-btn.repeat   { border-color:#F59E0B; background:rgba(245,158,11,.07); }
+        .pr-result-icon  { font-size:22px; margin-bottom:5px; }
+        .pr-result-label { font-size:13px; font-weight:700; }
+        .pr-result-sub   { font-size:11px; color:var(--text-muted); margin-top:2px; }
+        .pr-result-btn.promoted .pr-result-label { color:#22C55E; }
+        .pr-result-btn.repeat   .pr-result-label { color:#F59E0B; }
+
+        .pr-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .pr-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+        @media(max-width:560px){ .pr-grid,.pr-grid-3 { grid-template-columns:1fr; } }
+        .pr-label  { font-size:11.5px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+        .pr-input,.pr-select { width:100%; padding:9px 11px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; font-size:13px; color:var(--text-primary); outline:none; transition:border-color var(--transition); }
+        .pr-input:focus,.pr-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(245,158,11,.1); }
+
+        /* Preview */
+        .pr-preview { margin-top:16px; padding:14px 16px; border-radius:10px; background:var(--accent-soft); border:1px solid rgba(245,158,11,.2); font-size:13px; color:var(--text-secondary); line-height:1.6; }
+        .pr-preview strong { color:var(--accent); }
+
+        /* Repeat warning */
+        .pr-warn { background:rgba(245,158,11,.07); border:1px solid rgba(245,158,11,.2); border-radius:8px; padding:12px 14px; margin-top:14px; font-size:12.5px; color:var(--text-secondary); display:flex; gap:8px; }
+
+        /* Footer */
+        .pr-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); flex-wrap:wrap; }
+        .pr-error   { font-size:12.5px; color:var(--error); }
+        .pr-success { font-size:12.5px; color:#22C55E; display:flex; align-items:center; gap:6px; }
       `}</style>
 
-      <div className="promo-page">
-        <Link
-          href={`/dashboard/students/${studentUid}`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 7,
-            fontSize: 12.5,
-            color: "var(--text-muted)",
-            textDecoration: "none",
-            marginBottom: 18,
-          }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          Back to Student
-        </Link>
+      <div className="pr-wrap">
+        <div className="pr-header">
+          <div className="pr-title">Promote Student</div>
+          <div className="pr-desc">
+            Promote or repeat{" "}
+            <strong style={{ color: "var(--text-primary)" }}>
+              {student?.name?.en ?? studentUid}
+            </strong>{" "}
+            for the next academic year.
+          </div>
+        </div>
 
-        <div className="promo-card">
-          <div className="promo-header">
-            <div className="promo-icon">
+        {/* Current enrollment strip */}
+        {student && (
+          <div className="pr-strip">
+            <div className="pr-strip-item">
+              <div className="pr-strip-label">Current Class</div>
+              <div className="pr-strip-val">{fromClass}</div>
+            </div>
+            <div className="pr-strip-arrow">
               <svg
                 width="20"
                 height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.2"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </div>
-            <div>
-              <div className="promo-header-title">Promote Student</div>
-              <div className="promo-header-sub">
-                <code
-                  style={{
-                    color: "var(--accent)",
-                    fontFamily: "'JetBrains Mono',monospace",
-                    fontSize: "11px",
-                  }}
-                >
-                  {studentUid}
-                </code>
+            <div className="pr-strip-item">
+              <div className="pr-strip-label">
+                {isRepeat ? "Stays At" : "Will Be"}
               </div>
-              {/* school name from appConfig */}
-              <div className="promo-school">{appConfig.schoolNameEn}</div>
+              <div
+                className="pr-strip-val"
+                style={{ color: isRepeat ? "#F59E0B" : "#22C55E" }}
+              >
+                {isRepeat ? fromClass : form.toClass}
+              </div>
+            </div>
+            <div style={{ marginLeft: "auto" }}>
+              <div className="pr-strip-label">Current Roll</div>
+              <div className="pr-strip-val" style={{ fontSize: 16 }}>
+                #{fromRoll}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="pr-card">
+          <div className="pr-card-title">Promotion Details</div>
+
+          {/* Result toggle */}
+          <div className="pr-result-group">
+            {(["promoted", "repeat"] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`pr-result-btn ${form.result === r ? r : ""}`}
+                onClick={() => set("result", r)}
+              >
+                <div className="pr-result-icon">
+                  {r === "promoted" ? "🎓" : "🔄"}
+                </div>
+                <div className="pr-result-label">
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </div>
+                <div className="pr-result-sub">
+                  {r === "promoted"
+                    ? "Move to next class"
+                    : "Stay in same class"}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className={isRepeat ? "pr-grid" : "pr-grid-3"}>
+            <div>
+              <div className="pr-label">Session</div>
+              <select
+                className="pr-select"
+                value={form.session}
+                onChange={(e) => set("session", e.target.value)}
+              >
+                {SESSIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!isRepeat && (
+              <div>
+                <div className="pr-label">To Class</div>
+                <select
+                  className="pr-select"
+                  value={form.toClass}
+                  onChange={(e) => set("toClass", Number(e.target.value))}
+                >
+                  {CLASSES.filter((c) => c > fromClass).map((c) => (
+                    <option key={c} value={c}>
+                      Class {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <div className="pr-label">New Roll No.</div>
+              <input
+                type="number"
+                className="pr-input"
+                min={1}
+                value={form.newRoll}
+                onChange={(e) => set("newRoll", Number(e.target.value))}
+              />
             </div>
           </div>
 
-          <div className="promo-body">
-            <div className="promo-field">
-              <label className="promo-label">Academic Session</label>
-              <input
-                className="erp-input"
-                value={session}
-                onChange={(e) => setSession(e.target.value)}
-                placeholder="e.g. 2026"
-              />
-            </div>
-
-            <div>
-              <div className="promo-label" style={{ marginBottom: 8 }}>
-                Class Transition
-              </div>
-              <div className="promo-classes">
-                <div className="promo-field">
-                  <label className="promo-label" style={{ fontSize: 10 }}>
-                    From Class
-                  </label>
-                  <select
-                    className="erp-input erp-select"
-                    value={fromClass}
-                    onChange={(e) => setFromClass(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((c) => (
-                      <option key={c} value={c}>
-                        Class {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="promo-arrow">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </div>
-                <div className="promo-field">
-                  <label className="promo-label" style={{ fontSize: 10 }}>
-                    To Class
-                  </label>
-                  <select
-                    className="erp-input erp-select"
-                    value={toClass}
-                    onChange={(e) => setToClass(Number(e.target.value))}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((c) => (
-                      <option key={c} value={c}>
-                        Class {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="promo-label" style={{ marginBottom: 8 }}>
-                Result
-              </div>
-              <div className="promo-result-group">
-                <div
-                  className={`promo-result-opt ${
-                    result === "promoted" ? "sel-promo" : ""
-                  }`}
-                  onClick={() => setResult("promoted")}
-                >
-                  <div
-                    className="promo-dot"
-                    style={{ background: "var(--success)" }}
-                  />
-                  <span className="promo-opt-label">Promoted</span>
-                </div>
-                <div
-                  className={`promo-result-opt ${
-                    result === "held_back" ? "sel-held" : ""
-                  }`}
-                  onClick={() => setResult("held_back")}
-                >
-                  <div
-                    className="promo-dot"
-                    style={{ background: "var(--error)" }}
-                  />
-                  <span className="promo-opt-label">Held Back</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="promo-warning">
+          {isRepeat && (
+            <div className="pr-warn">
               <svg
-                width="14"
-                height="14"
+                width="15"
+                height="15"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="var(--warning)"
+                stroke="var(--accent)"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 style={{ flexShrink: 0, marginTop: 1 }}
               >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                <path d="M12 9v4M12 17h.01" />
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
               </svg>
-              <span className="promo-warning-text">
-                This action updates the student's class enrollment. Previous
-                history will be preserved.
+              <span>
+                Student will remain in <strong>Class {fromClass}</strong> for
+                session <strong>{form.session}</strong> with a new roll number.
               </span>
             </div>
+          )}
+
+          {/* Preview */}
+          <div className="pr-preview">
+            <strong>{student?.name?.en ?? "Student"}</strong> will be{" "}
+            {isRepeat ? (
+              <>
+                kept in <strong>Class {fromClass}</strong> (repeat)
+              </>
+            ) : (
+              <>
+                promoted from <strong>Class {fromClass}</strong> →{" "}
+                <strong>Class {form.toClass}</strong>
+              </>
+            )}{" "}
+            · Session <strong>{form.session}</strong> · Roll{" "}
+            <strong>#{form.newRoll}</strong>
           </div>
 
-          <div className="promo-footer">
-            <Link
-              href={`/dashboard/students/${studentUid}`}
-              className="erp-btn-ghost"
-            >
-              Cancel
-            </Link>
-            <button
-              className="erp-btn-primary"
-              onClick={handlePromote}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <div className="erp-spinner" />
-                  <span>Processing…</span>
-                </>
-              ) : (
-                <>
+          <div className="pr-footer">
+            <div>
+              {error && <div className="pr-error">{error}</div>}
+              {success && (
+                <div className="pr-success">
                   <svg
-                    width="14"
-                    height="14"
+                    width="13"
+                    height="13"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -286,10 +296,38 @@ const { toast } = useToast();
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                    <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Confirm Promotion
-                </>
+                  Saved! Redirecting…
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className="erp-btn"
+              onClick={handleSubmit}
+              disabled={isLoading || success}
+              style={{ minWidth: 160 }}
+            >
+              {isLoading ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ animation: "spin 1s linear infinite" }}
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  Processing…
+                </span>
+              ) : (
+                `Confirm ${isRepeat ? "Repeat" : "Promotion"}`
               )}
             </button>
           </div>
