@@ -13,7 +13,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function StudentOverviewPage() {
   const { studentUid } = useParams<{ studentUid: string }>();
-  const { data: student, isLoading } = useGetStudentByUidQuery(studentUid);
+
+  const { data: raw, isLoading } = useGetStudentByUidQuery(studentUid);
+
+  // Backend returns { success, data: Student } — unwrap safely
+  const student = (raw as any)?.data ?? raw ?? null;
 
   if (isLoading) return <OverviewSkeleton />;
   if (!student) return null;
@@ -21,30 +25,36 @@ export default function StudentOverviewPage() {
   return (
     <>
       <style>{`
-        .ov-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:14px; animation:pageEnter .3s ease both; }
+        .ov-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; animation:pageEnter .3s ease both; }
         .ov-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:18px; box-shadow:var(--shadow-sm); }
-        .ov-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); }
+        .ov-card-title { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:14px; }
+        .ov-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); gap:12px; }
         .ov-row:last-child  { border-bottom:none; padding-bottom:0; }
         .ov-row:first-child { padding-top:0; }
-        .ov-key { font-size:12px; color:var(--text-muted); font-weight:500; }
-        .ov-val { font-size:13px; color:var(--text-primary); font-weight:600; text-align:right; }
+        .ov-key { font-size:12px; color:var(--text-muted); font-weight:500; flex-shrink:0; }
+        .ov-val { font-size:13px; color:var(--text-primary); font-weight:600; text-align:right; word-break:break-all; }
       `}</style>
 
       <div className="ov-grid">
+        {/* ── Personal Info ── */}
         <div className="ov-card">
-          <div className="erp-section-title">Personal Info</div>
+          <div className="ov-card-title">Personal Info</div>
           {(
             [
               [
                 "Birth Date",
                 student.birthDate
-                  ? new Date(student.birthDate).toLocaleDateString("en-GB")
+                  ? new Date(student.birthDate).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })
                   : undefined,
               ],
               ["Birth Reg.", student.birthRegistration],
               ["Gender", student.gender],
               ["Religion", student.religion],
-              ["Language", (student.languagePreference ?? "bn").toUpperCase()],
+              ["Language", student.languagePreference?.toUpperCase() ?? "BN"],
             ] as [string, any][]
           ).map(([k, v]) => (
             <div key={k} className="ov-row">
@@ -61,8 +71,9 @@ export default function StudentOverviewPage() {
           ))}
         </div>
 
+        {/* ── Father's Info ── */}
         <div className="ov-card">
-          <div className="erp-section-title">Father's Info</div>
+          <div className="ov-card-title">Father's Info</div>
           {(
             [
               ["Name (EN)", student.father?.name?.en],
@@ -79,8 +90,9 @@ export default function StudentOverviewPage() {
           ))}
         </div>
 
+        {/* ── Mother's Info ── */}
         <div className="ov-card">
-          <div className="erp-section-title">Mother's Info</div>
+          <div className="ov-card-title">Mother's Info</div>
           {(
             [
               ["Name (EN)", student.mother?.name?.en],
@@ -97,12 +109,18 @@ export default function StudentOverviewPage() {
           ))}
         </div>
 
+        {/* ── Enrollment ── */}
         <div className="ov-card">
-          <div className="erp-section-title">Enrollment</div>
+          <div className="ov-card-title">Enrollment</div>
           {(
             [
               ["Session", student.current?.session],
-              ["Class", `Class ${student.current?.class}`],
+              [
+                "Class",
+                student.current?.class != null
+                  ? `Class ${student.current.class}`
+                  : undefined,
+              ],
               ["Roll No.", student.current?.roll],
               ["Status", student.status],
             ] as [string, any][]
@@ -125,17 +143,55 @@ export default function StudentOverviewPage() {
             </div>
           ))}
         </div>
+
+        {/* ── Guardians (conditional) ── */}
+        {student.guardians?.length > 0 && (
+          <div className="ov-card">
+            <div className="ov-card-title">Guardian Info</div>
+            {student.guardians.map((g: any, i: number) => (
+              <div
+                key={i}
+                style={{
+                  marginBottom: i < student.guardians.length - 1 ? 12 : 0,
+                }}
+              >
+                {(
+                  [
+                    ["Relation", g.relation],
+                    ["Name (EN)", g.name?.en],
+                    ["Name (BN)", g.name?.bn],
+                    ["Mobile", g.mobile],
+                    ["Wallet", g.walletProvider],
+                  ] as [string, any][]
+                ).map(([k, v]) =>
+                  v ? (
+                    <div key={k} className="ov-row">
+                      <span className="ov-key">{k}</span>
+                      <span
+                        className="ov-val"
+                        style={{ textTransform: "capitalize" }}
+                      >
+                        {v}
+                      </span>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
 }
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 function OverviewSkeleton() {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit,minmax(270px,1fr))",
+        gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
         gap: 14,
       }}
     >
@@ -151,12 +207,12 @@ function OverviewSkeleton() {
         >
           <div
             style={{
-              height: 12,
-              width: 100,
-              borderRadius: 5,
+              height: 11,
+              width: 90,
+              borderRadius: 4,
               background: "var(--border)",
               animation: `pulse 1.5s ease infinite ${i * 0.08}s`,
-              marginBottom: 14,
+              marginBottom: 16,
             }}
           />
           {Array.from({ length: 5 }).map((_, j) => (
@@ -172,7 +228,7 @@ function OverviewSkeleton() {
               <div
                 style={{
                   height: 11,
-                  width: 70,
+                  width: 65,
                   borderRadius: 4,
                   background: "var(--border)",
                   animation: `pulse 1.5s ease infinite ${j * 0.05}s`,
@@ -181,7 +237,7 @@ function OverviewSkeleton() {
               <div
                 style={{
                   height: 11,
-                  width: 90,
+                  width: 95,
                   borderRadius: 4,
                   background: "var(--border)",
                   animation: `pulse 1.5s ease infinite ${j * 0.05}s`,

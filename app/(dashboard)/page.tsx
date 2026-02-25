@@ -247,7 +247,8 @@ export default function OverviewPage() {
           <div className="ov-welcome-glow" />
           <p className="ov-greeting">{greeting}</p>
           <h1 className="ov-title">
-            Welcome back, {user?.name?.split(" ")[0] ?? "Admin"} 👋
+            {/* Welcome back, {user?.name?.split(" ")[0] ?? "Admin"} 👋 */}
+            Welcome back, Admin 👋
           </h1>
           <p className="ov-school">
             {appConfig.schoolNameEn}

@@ -134,7 +134,7 @@ export default function StudentLayout({
 
       <div className="sl-shell">
         {/* Back */}
-        <Link href="/dashboard/students" className="sl-back">
+        <Link href="/students" className="sl-back">
           <svg
             width="14"
             height="14"
