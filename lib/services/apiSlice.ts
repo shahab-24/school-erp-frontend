@@ -3,10 +3,28 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 // import { csrfUtils } from "@/lib/utils/csrf";
 import type { RootState } from "../store";
 
+const getBaseUrl = () => {
+  // Browser environment
+  if (typeof window !== "undefined") {
+    // Production (Vercel)
+    if (window.location.hostname !== "localhost") {
+      return (
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://school-erp-backend-three.vercel.app/api/v1"
+      );
+    }
+  }
+
+  // Development (localhost)
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+};
+
+console.log("🔧 API Base URL:", getBaseUrl());
+
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL,
+    baseUrl: getBaseUrl(),
     credentials: "include",
     prepareHeaders: async (headers, { getState }) => {
       // Auth token
