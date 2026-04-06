@@ -5,11 +5,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, usePathname } from "next/navigation";
-import { logout } from "@/lib/features/authSlice";
-import type { RootState } from "@/lib/store";
+import { clearUser } from "@/lib/features/authSlice";
+
 import { appConfig } from "@/lib/config/appConfig";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { useLogoutMutation } from "@/lib/services/authApi";
+// src/components/layout/Topbar.tsx
+import type { RootState } from "@/lib/store";
 
+// ✅ এখন TypeScript error যাবে না
+ // ✅ কাজ করবে
 const ROUTE_LABELS: Record<string, string> = {
   "/": "Overview",
   "/students": "Students",
@@ -52,22 +57,50 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
-  const user = useSelector((s: RootState) => s.auth.user);
-  const role = useSelector((s: RootState) => s.auth.role);
-
+  
+const user = useSelector((state: RootState) => state.auth.user);
+const role = useSelector((state: RootState) => state.auth.role);
+const isAuthenticated = useSelector(
+  (state: RootState) => state.auth.isAuthenticated
+);
   const [notifOpen, setNotifOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const [logoutApi, { isLoading: isLoggingOut }] = useLogoutMutation();
 
   const closeAll = () => {
     setNotifOpen(false);
     setDropdownOpen(false);
   };
-  const handleLogout = () => {
-    dispatch(logout());
-    router.push("/login");
+
+  // src/components/layout/Topbar.tsx - handleLogout function
+  // src/components/layout/Topbar.tsx - handleLogout function
+
+  // src/components/layout/Topbar.tsx
+  
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await logoutApi().unwrap();
+      }
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      // ✅ clearUser ব্যবহার করুন
+      dispatch(clearUser());
+
+      // Cookies clear
+      document.cookie.split(";").forEach((cookie) => {
+        const [name] = cookie.split("=");
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
+      });
+
+      window.location.href = "/login";
+    }
   };
 
-  // Find best matching route label
   const pageLabel =
     Object.entries(ROUTE_LABELS)
       .filter(([path]) => pathname === path || pathname.startsWith(path + "/"))
@@ -78,6 +111,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     month: "short",
     day: "numeric",
   });
+
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length;
   const initials = (user?.name ?? user?.email ?? "U").charAt(0).toUpperCase();
   const schoolShort = appConfig.schoolNameEn.split(" ").slice(0, 3).join(" ");
@@ -139,7 +173,25 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
         .dd-link:hover { color:var(--text-primary); background:var(--accent-soft); }
         .dd-link.danger:hover { color:var(--error); background:var(--error-bg); }
         .dd-divider { height:1px; background:var(--border); margin:4px 0; }
-        .topbar-backdrop { position:fixed; inset:0; z-index:99; }
+        .topbar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20; /* lower than dropdown */
+}
+
+        .erp-spinner-small {
+          width: 14px;
+          height: 14px;
+          border: 2px solid rgba(0,0,0,0.1);
+          border-top-color: currentColor;
+          border-radius: 50%;
+          animation: spin 0.6s linear infinite;
+          display: inline-block;
+          margin-right: 8px;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
       {(notifOpen || dropdownOpen) && (
@@ -151,7 +203,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
       )}
 
       <header className="topbar">
-        {/* LEFT */}
+        {/* LEFT SECTION */}
         <div className="topbar-left">
           <button
             className="erp-icon-btn topbar-menu"
@@ -184,7 +236,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
           </nav>
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT SECTION */}
         <div className="topbar-right">
           <span className="topbar-date">{today}</span>
 
@@ -326,22 +378,35 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
                     Settings
                   </Link>
                   <div className="dd-divider" />
-                  <button className="dd-link danger" onClick={handleLogout}>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16 17 21 12 16 7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                    Sign Out
+                  <button
+                    className="dd-link danger"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? (
+                      <>
+                        <span className="erp-spinner-small" />
+                        Signing out...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                          <polyline points="16 17 21 12 16 7" />
+                          <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Sign Out
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useGetStudentByUidQuery } from "@/lib/services/studentApi";
+import { useGetStudentQuery } from "@/lib/services/studentApi";
 import type { PromotionEntry } from "@/types/student.types";
 
 const RESULT_CFG = {
@@ -24,7 +24,7 @@ export default function StudentResultsPage() {
   const { studentUid } = useParams<{ studentUid: string }>();
 
   // useGetStudentByUidQuery → returns Student directly
-  const { data: student, isLoading } = useGetStudentByUidQuery(studentUid);
+  const { data: student, isLoading } = useGetStudentQuery(studentUid);
 
   // promotions: PromotionEntry[] lives inside student object
   const promotions: PromotionEntry[] = student?.promotions ?? [];

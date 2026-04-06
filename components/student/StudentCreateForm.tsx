@@ -36,7 +36,7 @@ export default function StudentCreateForm() {
     watch,
     formState: { errors },
   } = useForm<StudentFormData>({
-    resolver: zodResolver(studentSchema),
+    resolver: zodResolver(studentSchema) as any,
     defaultValues: {
       guardians: [],
     },

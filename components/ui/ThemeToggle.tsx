@@ -3,7 +3,6 @@
 
 import { useTheme } from "@/context/ThemeProvider";
 
-// Sun icon
 function SunIcon() {
   return (
     <svg
@@ -22,7 +21,6 @@ function SunIcon() {
   );
 }
 
-// Moon icon
 function MoonIcon() {
   return (
     <svg
@@ -41,15 +39,9 @@ function MoonIcon() {
 }
 
 /**
- * ThemeToggle — animated sun/moon button
- *
- * Works via globals.css:
- *   .theme-icon-sun  → visible in dark mode
- *   .theme-icon-moon → visible in light mode
- *   [data-theme="light"] flips which is visible
- *
- * ThemeProvider.toggleTheme() sets data-theme on <html>
- * → CSS automatically switches the visible icon
+ * ThemeToggle — sun/moon animated button
+ * Reads [data-theme] from globals.css to show correct icon.
+ * Calls ThemeProvider.toggleTheme() on click.
  */
 export default function ThemeToggle() {
   const { isDark, toggleTheme } = useTheme();
@@ -68,12 +60,12 @@ export default function ThemeToggle() {
       onMouseEnter={(e) => (e.currentTarget.style.transform = "rotate(15deg)")}
       onMouseLeave={(e) => (e.currentTarget.style.transform = "rotate(0deg)")}
     >
-      {/* Sun — shown in dark mode */}
-      <span className="theme-icon theme-icon-sun">
+      {/* Sun — visible in dark mode (click to go light) */}
+      <span className="theme-icon theme-icon-sun" aria-hidden="true">
         <SunIcon />
       </span>
-      {/* Moon — shown in light mode */}
-      <span className="theme-icon theme-icon-moon">
+      {/* Moon — visible in light mode (click to go dark) */}
+      <span className="theme-icon theme-icon-moon" aria-hidden="true">
         <MoonIcon />
       </span>
     </button>

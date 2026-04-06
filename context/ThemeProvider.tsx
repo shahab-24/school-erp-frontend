@@ -23,10 +23,11 @@ const ThemeContext = createContext<ThemeContextValue>({
   toggleTheme: () => {},
 });
 
-const STORAGE_KEY = "erp-theme";
+const KEY = "erp-theme";
 
-function applyTheme(theme: Theme) {
-  // This is what actually makes CSS vars switch — data-theme on <html>
+function apply(theme: Theme) {
+  // This is the ONLY thing that needs to happen for CSS vars to switch.
+  // globals.css listens to [data-theme="dark"|"light"] on <html>.
   document.documentElement.setAttribute("data-theme", theme);
 }
 
@@ -34,21 +35,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const stored = localStorage.getItem(KEY) as Theme | null;
     const system: Theme = window.matchMedia("(prefers-color-scheme: dark)")
       .matches
       ? "dark"
       : "light";
     const initial = stored ?? system;
     setTheme(initial);
-    applyTheme(initial);
+    apply(initial);
   }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
-      localStorage.setItem(STORAGE_KEY, next);
-      applyTheme(next);
+      localStorage.setItem(KEY, next);
+      apply(next);
       return next;
     });
   };

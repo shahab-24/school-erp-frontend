@@ -1,7 +1,7 @@
-// src/app/layout.tsx  ← ROOT layout (server component)
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { appConfig } from "@/lib/config/appConfig";
-import ClientLayout from "./ClientLayout";
+import { Providers } from "@/lib/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,12 +16,11 @@ export default function RootLayout({
 }) {
   return (
     // suppressHydrationWarning is REQUIRED:
-    // ThemeProvider sets data-theme on <html> client-side (useEffect).
-    // Server renders <html> without it → React sees mismatch → warning.
-    // This prop silences only that one attribute mismatch — nothing else.
+    // ThemeProvider sets data-theme on <html> inside useEffect (client-only).
+    // Server renders <html> without it → React mismatch → this silences it safely.
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ClientLayout>{children}</ClientLayout>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

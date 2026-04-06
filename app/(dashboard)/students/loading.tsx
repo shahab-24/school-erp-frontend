@@ -1,106 +1,47 @@
 // src/app/(dashboard)/students/loading.tsx
-// Next.js automatically shows this while students/page.tsx loads (Suspense boundary).
-// Matches the exact layout of StudentsPage to prevent layout shift.
+// Next.js Suspense boundary — shows while page.tsx loads
 
 export default function StudentsLoading() {
   return (
-    <>
-      <style>{`
-        .sk-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:22px; flex-wrap:wrap; }
-        .sk-block { border-radius:6px; background:var(--border); }
-        .sk-pulse { animation:pulse 1.5s ease infinite; }
-        .sk-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:18px; }
-        .sk-stat { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; }
-        .sk-table-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
-        .sk-table-row { display:flex; gap:12px; padding:13px 16px; border-bottom:1px solid var(--border); align-items:center; }
-        .sk-table-row:last-child { border-bottom:none; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-      `}</style>
-
-      {/* Header skeleton */}
-      <div className="sk-header">
-        <div>
-          <div
-            className="sk-block sk-pulse"
-            style={{ width: 120, height: 28, marginBottom: 8 }}
-          />
-          <div
-            className="sk-block sk-pulse"
-            style={{ width: 220, height: 14 }}
-          />
+    <div className="space-y-5 animate-pulse">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <div className="h-6 w-32 rounded-xl bg-white/5" />
+          <div className="h-4 w-56 rounded-xl bg-white/5" />
         </div>
-        <div style={{ display: "flex", gap: 9 }}>
-          <div
-            className="sk-block sk-pulse"
-            style={{ width: 90, height: 40, borderRadius: 9 }}
-          />
-          <div
-            className="sk-block sk-pulse"
-            style={{
-              width: 120,
-              height: 40,
-              borderRadius: 9,
-              background: "var(--accent-soft)",
-            }}
-          />
-        </div>
+        <div className="h-10 w-36 rounded-xl bg-white/5" />
       </div>
 
-      {/* Stats skeleton */}
-      <div className="sk-stats">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="sk-stat">
-            <div
-              className="sk-block sk-pulse"
-              style={{
-                width: 48,
-                height: 28,
-                marginBottom: 8,
-                animationDelay: `${i * 0.1}s`,
-              }}
-            />
-            <div
-              className="sk-block sk-pulse"
-              style={{
-                width: 90,
-                height: 12,
-                animationDelay: `${i * 0.1 + 0.05}s`,
-              }}
-            />
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-20 rounded-xl bg-white/5" />
         ))}
       </div>
 
-      {/* Filter skeleton */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <div
-          className="sk-block sk-pulse"
-          style={{ flex: 1, height: 44, borderRadius: 9 }}
-        />
-        <div
-          className="sk-block sk-pulse"
-          style={{ width: 130, height: 44, borderRadius: 9 }}
-        />
-      </div>
+      {/* Filter bar */}
+      <div className="h-16 rounded-xl bg-white/5" />
 
-      {/* Table skeleton */}
-      <div className="sk-table-card">
-        {[80, 180, 40, 50, 70].map((_, ri) => (
-          <div key={ri} className="sk-table-row">
-            {[80, 180, 40, 50, 70, 60].map((w, ci) => (
-              <div
-                key={ci}
-                className="sk-block sk-pulse"
-                style={{
-                  height: 14,
-                  width: w,
-                  animationDelay: `${(ri + ci) * 0.05}s`,
-                }}
-              />
-            ))}
+      {/* Table */}
+      <div className="rounded-xl bg-white/[0.03] border border-white/8 overflow-hidden">
+        <div className="h-12 bg-white/[0.02] border-b border-white/8" />
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 px-4 py-3.5 border-b border-white/5"
+          >
+            <div className="w-8 h-8 rounded-lg bg-white/5 shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 rounded-full bg-white/5 w-2/5" />
+              <div className="h-2.5 rounded-full bg-white/5 w-1/4" />
+            </div>
+            <div className="h-3 rounded-full bg-white/5 w-24" />
+            <div className="h-3 rounded-full bg-white/5 w-16" />
+            <div className="h-5 rounded-lg bg-white/5 w-16" />
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

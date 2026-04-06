@@ -4,7 +4,8 @@ import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import {
-  useGetStudentByUidQuery,
+  
+  useGetStudentQuery,
   useUpdateStudentStatusMutation,
 } from "@/lib/services/studentApi";
 import { appConfig } from "@/lib/config/appConfig";
@@ -59,7 +60,7 @@ export default function StudentLayout({
   const { studentUid } = useParams<{ studentUid: string }>();
   const pathname = usePathname();
 
-  const { data: student, isLoading } = useGetStudentByUidQuery(studentUid);
+  const { data: student, isLoading } = useGetStudentQuery(studentUid);
   const [updateStatus, { isLoading: isUpdating }] =
     useUpdateStudentStatusMutation();
   const [statusOpen, setStatusOpen] = useState(false);
@@ -78,7 +79,7 @@ export default function StudentLayout({
 
   const handleStatusChange = async (status: StudentStatus) => {
     try {
-      await updateStatus({ studentUid, payload: { status } }).unwrap();
+      await updateStatus({ studentUid,  status  }).unwrap();
       setStatusOpen(false);
     } catch {}
   };
@@ -115,7 +116,7 @@ export default function StudentLayout({
         .sl-status-pill:disabled { cursor:default; opacity:.6; }
         .sl-status-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
         .sl-status-dd { position:absolute; top:calc(100% + 6px); left:0; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:4px; box-shadow:var(--shadow-card); z-index:100; min-width:155px; animation:pageEnter .15s ease both; }
-        .sl-status-opt { padding:8px 10px; border-radius:6px; font-size:12.5px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; transition:background var(--transition); color:var(--text-primary); }
+        .sl-status-opt { padding:8px 10px; border-radius:6px; font-size:12.5px; font-weight:500; cursor:pointer; display:flex; z-index: 50 align-items:center; gap:8px; transition:background var(--transition); color:var(--text-primary); }
         .sl-status-opt:hover { background:var(--bg-card-hover); }
         .sl-status-opt-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
@@ -207,7 +208,7 @@ export default function StudentLayout({
                 </span>
 
                 {/* Inline status changer */}
-                <div className="sl-status-wrap">
+                <div className="sl-status-wrap ">
                   <button
                     className="sl-status-pill"
                     style={{

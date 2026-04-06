@@ -1,13 +1,15 @@
 import { configureStore } from "@reduxjs/toolkit";
-
 import authReducer from "./features/authSlice";
 import { apiSlice } from "./services/apiSlice";
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
+
+    // Only ONE RTK Query reducer
     [apiSlice.reducerPath]: apiSlice.reducer,
-    auth: authReducer, // ✅ MUST exist
   },
+
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(apiSlice.middleware),
 });
