@@ -1,43 +1,27 @@
-// lib/services/examTypeApi.ts
 import { ExamType } from "@/types/academicSetup.types";
 import { apiSlice } from "./apiSlice";
 
-// export interface ExamType {
-//   _id: string;
-//   name: string;
-//   code: string;
-//   order: number;
-//   isActive: boolean;
-//   createdAt: string;
-//   updatedAt: string;
-// }
-
 export const examTypeApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // GET - No CSRF needed
+    // ✅ GET
     listExamTypes: builder.query<ExamType[], void>({
       query: () => "/exam-types",
-      transformResponse: (response: { success: boolean; data: ExamType[] }) => {
-        console.log("📦 Exam types response:", response);
-        return response?.data || [];
-      },
+      transformResponse: (response: { success: boolean; data: ExamType[] }) =>
+        response?.data || [],
       providesTags: ["ExamType"],
     }),
 
-    // POST - CSRF automatically added by interceptor
+    // ✅ CREATE
     createExamType: builder.mutation<ExamType, Partial<ExamType>>({
-      query: (body) => {
-        console.log("📝 Creating exam type:", body);
-        return {
-          url: "/exam-types",
-          method: "POST",
-          body,
-        };
-      },
+      query: (body) => ({
+        url: "/exam-types",
+        method: "POST",
+        body,
+      }),
       invalidatesTags: ["ExamType"],
     }),
 
-    // PATCH - CSRF automatically added
+    // ✅ UPDATE
     updateExamType: builder.mutation<
       ExamType,
       { id: string; body: Partial<ExamType> }
@@ -53,24 +37,62 @@ export const examTypeApi = apiSlice.injectEndpoints({
       ],
     }),
 
-    // PATCH /toggle - CSRF automatically added
+    // ✅ TOGGLE
     toggleExamType: builder.mutation<ExamType, string>({
       query: (id) => ({
         url: `/exam-types/${id}/toggle`,
         method: "PATCH",
       }),
-      invalidatesTags: (result, error, id) => [
-        { type: "ExamType", id },
-        "ExamType",
-      ],
+
+      // 🔥 OPTIMISTIC UPDATE (FAST UI)
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          examTypeApi.util.updateQueryData(
+            "listExamTypes",
+            undefined,
+            (draft) => {
+              const item = draft.find((d) => d._id === id);
+              if (item) item.isActive = !item.isActive;
+            }
+          )
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
+
+      invalidatesTags: ["ExamType"],
     }),
 
-    // DELETE - CSRF automatically added
+    // ✅ DELETE
     deleteExamType: builder.mutation<void, string>({
       query: (id) => ({
         url: `/exam-types/${id}`,
         method: "DELETE",
       }),
+
+      // 🔥 optimistic remove
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          examTypeApi.util.updateQueryData(
+            "listExamTypes",
+            undefined,
+            (draft) => {
+              return draft.filter((d) => d._id !== id);
+            }
+          )
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
+
       invalidatesTags: ["ExamType"],
     }),
   }),

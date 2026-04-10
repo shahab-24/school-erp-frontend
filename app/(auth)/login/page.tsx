@@ -1,19 +1,24 @@
-// src/app/(auth)/login/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// app/(auth)/login/page.tsx
 "use client";
 
-import { useState } from "react";
-import Image from "next/image"; // ✅ next/image, NOT lucide-react
+import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { useLoginMutation } from "@/lib/services/authApi";
-import { setUser } from "@/lib/features/authSlice";
+import { setCredentials } from "@/lib/features/authSlice";
 import { appConfig } from "@/lib/config/appConfig";
+import type { RootState } from "@/lib/store";
 
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.auth.isAuthenticated
+  );
 
   const [login, { isLoading }] = useLoginMutation();
 
@@ -21,6 +26,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // ✅ Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (isAuthenticated || token) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
+  // app/(auth)/login/page.tsx - handleLogin function
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +46,7 @@ export default function LoginPage() {
     }
 
     setError("");
+    setSuccess("");
 
     try {
       const res = await login({
@@ -38,25 +54,48 @@ export default function LoginPage() {
         password,
       }).unwrap();
 
+      console.log("📥 Login response:", res);
+
+      if (res.token) {
+        localStorage.setItem("token", res.token);
+        localStorage.setItem("user", JSON.stringify(res.user));
+        localStorage.setItem("role", res.role);
+      }
+
       dispatch(
-        setUser({
+        setCredentials({
+          token: res.token,
           user: res.user,
-          
+          role: res.role,
         })
       );
 
-      router.push("/");
+      setSuccess(`Welcome back, ${res.user.name || res.user.email}!`);
+router.push("/");
+      setTimeout(() => {
+        router.push("/");
+      }, 1000);
     } catch (err: any) {
-      const msg =
-        err?.data?.message ?? err?.data?.error ?? "Invalid email or password.";
+      console.error("❌ Login error:", err);
 
-      setError(msg);
+      // ✅ Better error message based on status code
+      if (err?.status === 401) {
+        setError("Invalid email or password. Please try again.");
+      } else if (err?.status === 404) {
+        setError("Login service unavailable. Please try again later.");
+      } else {
+        const msg =
+          err?.data?.message ??
+          err?.data?.error ??
+          "Invalid email or password.";
+        setError(msg);
+      }
     }
   };
+
   return (
     <>
       <style>{`
-        /* All vars from globals.css — auto theme-aware */
         .login-root {
           font-family: "Sora", sans-serif;
           min-height: 100dvh;
@@ -135,7 +174,15 @@ export default function LoginPage() {
           border-radius:var(--radius-sm); padding:9px 13px;
           animation: shake 0.4s ease;
         }
+        .success-box {
+          display:flex; align-items:center; gap:9px;
+          background:var(--success-bg); border:1px solid rgba(52,211,153,0.2);
+          border-radius:var(--radius-sm); padding:9px 13px;
+          margin-bottom: 14px;
+          color: var(--success);
+        }
         .error-text { font-size:13px; color:var(--error); line-height:1.4; }
+        .success-text { font-size:13px; color:var(--success); line-height:1.4; }
         .login-btn {
           position:relative; overflow:hidden; width:100%;
           background:var(--accent); color:#0B0F1A;
@@ -164,7 +211,38 @@ export default function LoginPage() {
         .role-pill-label { font-size:11px; font-weight:600; color:var(--text-secondary); white-space:nowrap; }
         .login-footer { margin-top:16px; text-align:center; font-size:11.5px; color:var(--text-muted); line-height:1.6; }
         .login-footer address { font-style:normal; }
+        .auth-links {
+          margin-top: 16px;
+          text-align: center;
+          font-size: 12.5px;
+        }
+        .auth-links a {
+          color: var(--accent);
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .auth-links a:hover {
+          text-decoration: underline;
+        }
+        .auth-links span {
+          color: var(--text-muted);
+          margin: 0 8px;
+        }
         @media(max-width:480px){ .login-card{padding:28px 18px 24px;} .brand-name-en{font-size:13.5px;} }
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes iconPulse {
+          0%, 100% { box-shadow: 0 0 0 4px var(--accent-glow); }
+          50% { box-shadow: 0 0 0 8px transparent; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes shake {
+          0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)}
+        }
       `}</style>
 
       <div className="login-root">
@@ -176,7 +254,6 @@ export default function LoginPage() {
           {/* Brand */}
           <div className="brand">
             <div className="brand-logo">
-              {/* next/image with fallback SVG */}
               <Image
                 src={appConfig.logo}
                 alt={appConfig.schoolNameEn}
@@ -230,7 +307,24 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Error */}
+          {/* Success Message */}
+          {success && (
+            <div className="success-box" role="status">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span className="success-text">{success}</span>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && (
             <div
               className="error-box"
@@ -398,6 +492,13 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* ✅ Auth Links - Sign Up & Forgot Password */}
+          <div className="auth-links">
+            <Link href="/forgot-password">Forgot Password?</Link>
+            <span>•</span>
+            <Link href="/register">Create an Account</Link>
+          </div>
 
           {/* Roles */}
           <div className="login-divider" style={{ marginTop: 18 }}>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/(dashboard)/academic-setup/exam-types/page.tsx
 "use client";
 
@@ -198,52 +199,74 @@ export default function ExamTypesPage() {
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", code: "", order: 0 },
-  });
+  }); // ONLY CHANGE THESE PARTS INSIDE YOUR FILE
 
+  // ✅ submit fix
   const onSubmit = async (data: FormData) => {
     try {
-      await createExamType({
-        name: data.name,
-        code: data.code,
+      const payload = {
+        name: data.name.trim(),
+        code: data.code.trim().toUpperCase(),
         order: data.order ?? 0,
-      }).unwrap();
+      };
+
+      await createExamType(payload).unwrap();
+
       toast.success("Exam type created!");
       reset();
     } catch (err: unknown) {
-      const msg = (err as { data?: { message?: string } })?.data?.message;
-      toast.error("Failed to create", { description: msg });
+      const msg = (err as any)?.data?.message;
+      toast.error(msg || "Failed to create");
     }
   };
 
+  // ✅ inline edit safe
   const handleUpdate = async (
     id: string,
     body: { name: string; code: string; order: number }
   ) => {
+    if (!body.name.trim() || !body.code.trim()) {
+      toast.error("Name & Code required");
+      return;
+    }
+
     try {
-      await updateExamType({ id, body }).unwrap();
+      await updateExamType({
+        id,
+        body: {
+          name: body.name.trim(),
+          code: body.code.trim().toUpperCase(),
+          order: body.order ?? 0,
+        },
+      }).unwrap();
+
       toast.success("Updated!");
       setEditingId(null);
-    } catch {
-      toast.error("Failed to update");
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Update failed");
     }
   };
 
+  // ✅ toggle improved
   const handleToggle = async (id: string, name: string, current: boolean) => {
     try {
       await toggleExamType(id).unwrap();
+
       toast.success(`"${name}" ${current ? "deactivated" : "activated"}`);
     } catch {
       toast.error("Failed to toggle");
     }
   };
 
+  // ✅ delete improved
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete "${name}"?`)) return;
+
     try {
       await deleteExamType(id).unwrap();
       toast.success(`"${name}" deleted`);
     } catch {
-      toast.error("Failed to delete");
+      toast.error("Delete failed");
     }
   };
 

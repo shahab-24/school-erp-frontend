@@ -26,11 +26,8 @@ export default function AuthInitializer({
   useEffect(() => {
     if (isSuccess && data?.user) {
       dispatch(
-  setUser({
-    user: data.user,
-  })
-);
-    }
+  setUser(data.user))}
+
     if (isError) {
       dispatch(clearUser());
     }
