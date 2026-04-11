@@ -6,12 +6,14 @@ import { useForm, useFieldArray, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+
 import {
   useListMarkStructuresQuery,
   useCreateMarkStructureMutation,
   useDeleteMarkStructureMutation,
 } from "@/lib/services/markStructureApi";
 import type { MarkStructure } from "@/types/academicSetup.types";
+import { CreateMarkStructureInput } from "@/validaton/markStructure.validation";
 
 // ─── Schema ──────────────────────────────────────────────────────
 
@@ -107,7 +109,6 @@ const CSS = `
 `;
 
 // ─── StructureListItem ────────────────────────────────────────────
-
 function StructureListItem({
   item,
   onDelete,
@@ -115,49 +116,38 @@ function StructureListItem({
   item: MarkStructure;
   onDelete: (id: string, name: string) => void;
 }) {
-  const total = item.components.reduce((s, c) => s + c.totalMarks, 0);
+  // ✅ correct (from backend data)
+  const total = item.components.reduce(
+    (sum: number, c) => sum + c.totalMarks,
+    0
+  );
+
   return (
     <div className="ms-item">
       <div className="ms-item-head">
         <div>
           <div className="ms-item-name">{item.name}</div>
-          <div
-            style={{
-              display: "flex",
-              gap: 6,
-              marginTop: 4,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
+
+          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
             <span className="ms-item-count">
               {item.components.length} component
-              {item.components.length !== 1 ? "s" : ""}
             </span>
+
             <span className="ms-total-pill">Total: {total}</span>
           </div>
         </div>
+
         <button
           className="ms-btn-danger"
           onClick={() => onDelete(item._id, item.name)}
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-          >
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            <path d="M10 11v6M14 11v6M9 6V4h6v2" />
-          </svg>
+          Delete
         </button>
       </div>
+
       <div className="ms-comp-tags">
-        {item.components.map((c, i) => (
-          <span key={i} className="ms-comp-tag">
+        {item.components.map((c) => (
+          <span key={c.key} className="ms-comp-tag">
             {c.key}
             <span className="ms-comp-marks">/{c.totalMarks}</span>
           </span>
@@ -182,73 +172,70 @@ export default function MarkStructuresPage() {
 
   const MONO = { fontFamily: '"JetBrains Mono",monospace' } as const;
 
- const {
-   register,
-   handleSubmit,
-   control,
-   reset,
-   formState: { errors },
- } = useForm<FormData>({
-   resolver: zodResolver(formSchema), // ✅ FIXED
-   defaultValues: {
-     name: "",
-     components: [
-       {
-         key: "written",
-         label: "Written",
-         totalMarks: 100,
-         required: true,
-       },
-     ],
-   },
- });
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      components: [
+        {
+          key: "written",
+          label: "Written",
+          totalMarks: 100,
+          required: true,
+        },
+      ],
+    },
+  });
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: "components",
   });
 
-  // ✅ FIXED SUBMIT
+  // ✅ FIXED TOTAL CALCULATION
+  const watchedComponents = watch("components");
+
+  const totalMarks = watchedComponents?.reduce(
+    (sum, c) => sum + (Number(c.totalMarks) || 0),
+    0
+  )
   const onSubmit: SubmitHandler<FormData> = async (data) => {
-    try {
-      const payload = {
-        name: data.name,
-        components: data.components.map((c) => ({
-          key: c.key,
-          label: c.label,
-          totalMarks: c.totalMarks,
-          required: c.required ?? false, // ✅ CRITICAL FIX
-        })),
-      };
+  try {
+    const payload: CreateMarkStructureInput = {
+      name: data.name.trim(),
+      components: data.components.map((c) => ({
+        key: c.key.trim(),
+        label: c.label.trim(),
+        totalMarks: c.totalMarks,
+        required: c.required ?? false,
+      })),
+    };
 
-      await createMarkStructure(payload).unwrap();
+    await createMarkStructure(payload).unwrap();
 
-      toast.success(`"${data.name}" created!`);
+    toast.success("Created!");
 
-      reset({
-        name: "",
-        components: [
-          {
-            key: "written",
-            label: "Written",
-            totalMarks: 100,
-            required: true,
-          },
-        ],
-      });
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to create");
-    }
-  };
-
+    reset();
+  } catch (err: any) {
+    toast.error(err?.data?.message || "Error");
+  }
+};
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete "${name}"?`)) return;
+
     try {
       await deleteMarkStructure(id).unwrap();
-      toast.success(`"${name}" deleted`);
+      toast.success("Deleted");
     } catch {
-      toast.error("Failed to delete");
+      toast.error("Failed");
     }
   };
 

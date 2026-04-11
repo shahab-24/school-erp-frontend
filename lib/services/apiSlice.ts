@@ -105,6 +105,6 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Auth", "Student", "ResultConfig", "ExamType", "MarkStructure"],
+  tagTypes: ["Auth", "Student", "ResultConfig", "ExamType", "MarkStructure", "Subject", "Grading"],
   endpoints: () => ({}),
 });

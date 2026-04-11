@@ -385,6 +385,16 @@ const NAV: NavSection[] = [
             label: "Mark Structures",
             icon: Icon.markStructure,
           },
+          {
+            href: "/academic-setup/subjects",
+            label: "Subjects",
+            icon: Icon.markStructure,
+          },
+          {
+            href: "/academic-setup/grading-system",
+            label: "Grading",
+            icon: Icon.markStructure,
+          },
         ],
       },
     ],

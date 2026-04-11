@@ -54,7 +54,7 @@ export default function LoginPage() {
         password,
       }).unwrap();
 
-      console.log("📥 Login response:", res);
+      // console.log("📥 Login response:", res);
 
       if (res.token) {
         localStorage.setItem("token", res.token);
